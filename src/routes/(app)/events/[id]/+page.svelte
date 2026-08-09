@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { getUnlockedKey } from '$lib/crypto/session.svelte';
-	import { unsealEventKey, sealEventKeyFor, decryptEventData } from '$lib/crypto/eventKey';
+	import { unsealEventKey, sealEventKeyFor, decryptEventData, encryptEventData } from '$lib/crypto/eventKey';
 	import UnlockPassphraseModal from '$lib/components/UnlockPassphraseModal.svelte';
+	import PartySocket from 'partysocket';
+	import { PUBLIC_PARTYKIT_HOST } from '$env/static/public';
 
 	let { data } = $props();
 
@@ -24,7 +26,13 @@
 		error?: string;
 	}
 
+	interface RsvpResult {
+		status?: 'going' | 'maybe' | 'declined' | 'waitlisted';
+		error?: string;
+	}
+
 	let unlockOpen = $state(false);
+	let eventKey = $state<Uint8Array | null>(null);
 	let details = $state<EventDetails | null>(null);
 	let decryptError = $state('');
 
@@ -34,13 +42,19 @@
 	let inviteLoading = $state(false);
 	let resolvingId = $state<string | null>(null);
 
+	// seeded once from load(), then owned locally by setRsvp — not meant to reset on invalidateAll()
+	let rsvpStatus = $state(data.myRsvpStatus);
+	let rsvpNotes = $state('');
+	let rsvpLoading = $state(false);
+	let liveCount = $state<number | null>(null);
+
 	async function decrypt() {
 		const unlocked = getUnlockedKey();
 		if (!unlocked) return;
 
 		decryptError = '';
 		try {
-			const eventKey = await unsealEventKey(data.membership.wrappedKey, unlocked.publicKey, unlocked.privateKey);
+			eventKey = await unsealEventKey(data.membership.wrappedKey, unlocked.publicKey, unlocked.privateKey);
 			details = await decryptEventData<EventDetails>(
 				{ ciphertext: data.event.ciphertext, nonce: data.event.nonce },
 				eventKey
@@ -54,6 +68,15 @@
 		if (getUnlockedKey()) decrypt();
 	});
 
+	$effect(() => {
+		const socket = new PartySocket({ host: PUBLIC_PARTYKIT_HOST, room: data.event.id });
+		socket.addEventListener('message', (e) => {
+			const msg = JSON.parse(e.data);
+			if (msg.type === 'count') liveCount = msg.count;
+		});
+		return () => socket.close();
+	});
+
 	async function handleInvite() {
 		inviteStatus = '';
 		const unlocked = getUnlockedKey();
@@ -64,12 +87,13 @@
 
 		inviteLoading = true;
 		try {
+			if (!eventKey) eventKey = await unsealEventKey(data.membership.wrappedKey, unlocked.publicKey, unlocked.privateKey);
+
 			const lookup = await fetch(`/api/users/by-username?username=${encodeURIComponent(inviteUsername)}`);
 			const lookupResult: LookupResult = await lookup.json();
 
 			let wrappedKey: string | undefined;
 			if (lookupResult.publicKey) {
-				const eventKey = await unsealEventKey(data.membership.wrappedKey, unlocked.publicKey, unlocked.privateKey);
 				wrappedKey = await sealEventKeyFor(eventKey, lookupResult.publicKey);
 			}
 
@@ -100,7 +124,7 @@
 
 		resolvingId = invite.id;
 		try {
-			const eventKey = await unsealEventKey(data.membership.wrappedKey, unlocked.publicKey, unlocked.privateKey);
+			if (!eventKey) eventKey = await unsealEventKey(data.membership.wrappedKey, unlocked.publicKey, unlocked.privateKey);
 			const wrappedKey = await sealEventKeyFor(eventKey, invite.resolvablePublicKey);
 
 			await fetch(`/api/events/${data.event.id}/pending-invites/${invite.id}/resolve`, {
@@ -112,6 +136,38 @@
 			await invalidateAll();
 		} finally {
 			resolvingId = null;
+		}
+	}
+
+	async function setRsvp(status: 'going' | 'maybe' | 'declined') {
+		const unlocked = getUnlockedKey();
+		if (!unlocked) {
+			unlockOpen = true;
+			return;
+		}
+
+		rsvpLoading = true;
+		try {
+			if (!eventKey) eventKey = await unsealEventKey(data.membership.wrappedKey, unlocked.publicKey, unlocked.privateKey);
+
+			let encryptedDetails: string | undefined;
+			let detailsNonce: string | undefined;
+			if (rsvpNotes.trim()) {
+				const payload = await encryptEventData({ notes: rsvpNotes }, eventKey);
+				encryptedDetails = payload.ciphertext;
+				detailsNonce = payload.nonce;
+			}
+
+			const res = await fetch(`/api/events/${data.event.id}/rsvp`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ status, encryptedDetails, detailsNonce })
+			});
+
+			const result: RsvpResult = await res.json();
+			if (res.ok && result.status) rsvpStatus = result.status;
+		} finally {
+			rsvpLoading = false;
 		}
 	}
 </script>
@@ -131,6 +187,44 @@
 		{#if details.date}<p class="text-sm text-gray-600">{details.date}</p>{/if}
 		{#if details.location}<p class="text-sm text-gray-600">{details.location}</p>{/if}
 		{#if details.description}<p class="mt-3 text-sm">{details.description}</p>{/if}
+		{#if liveCount !== null}<p class="mt-2 text-sm text-gray-500">{liveCount} going</p>{/if}
+
+		<div class="mt-6 border-t pt-6">
+			<h2 class="mb-2 text-sm font-medium text-gray-700">Your RSVP</h2>
+			<div class="flex gap-2">
+				<button
+					onclick={() => setRsvp('going')}
+					disabled={rsvpLoading}
+					class="rounded border px-3 py-1.5 text-sm {rsvpStatus === 'going' ? 'bg-black text-white' : ''}"
+				>
+					Going
+				</button>
+				<button
+					onclick={() => setRsvp('maybe')}
+					disabled={rsvpLoading}
+					class="rounded border px-3 py-1.5 text-sm {rsvpStatus === 'maybe' ? 'bg-black text-white' : ''}"
+				>
+					Maybe
+				</button>
+				<button
+					onclick={() => setRsvp('declined')}
+					disabled={rsvpLoading}
+					class="rounded border px-3 py-1.5 text-sm {rsvpStatus === 'declined' ? 'bg-black text-white' : ''}"
+				>
+					Can't go
+				</button>
+			</div>
+			{#if rsvpStatus === 'waitlisted'}
+				<p class="mt-2 text-sm text-amber-600">You're on the waitlist — we'll let you know if a spot opens up.</p>
+			{/if}
+			<label for="rsvp-notes" class="mt-3 mb-1 block text-sm font-medium">Notes (optional, encrypted)</label>
+			<textarea
+				id="rsvp-notes"
+				bind:value={rsvpNotes}
+				placeholder="Dietary restrictions, plus-ones, etc."
+				class="w-full rounded border p-2 text-sm"
+			></textarea>
+		</div>
 
 		<div class="mt-6 border-t pt-6">
 			<h2 class="mb-2 text-sm font-medium text-gray-700">Members</h2>

@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, uuid, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, integer, text, uuid, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
 	id: uuid('id').primaryKey().defaultRandom(),
@@ -30,6 +30,7 @@ export const events = pgTable('events', {
 		.references(() => users.id),
 	ciphertext: text('ciphertext').notNull(),
 	nonce: text('nonce').notNull(),
+	capacity: integer('capacity'),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
@@ -84,4 +85,25 @@ export const pendingInvites = pgTable(
 		createdAt: timestamp('created_at').defaultNow().notNull()
 	},
 	(table) => [uniqueIndex('pending_invites_event_username_idx').on(table.eventId, table.telegramUsername)]
+);
+
+export const rsvps = pgTable(
+	'rsvps',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		eventId: uuid('event_id')
+			.notNull()
+			.references(() => events.id, { onDelete: 'cascade' }),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		status: text('status', { enum: ['going', 'maybe', 'declined', 'waitlisted'] })
+			.notNull()
+			.default('going'),
+		encryptedDetails: text('encrypted_details'),
+		detailsNonce: text('details_nonce'),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull()
+	},
+	(table) => [uniqueIndex('rsvps_event_user_idx').on(table.eventId, table.userId)]
 );

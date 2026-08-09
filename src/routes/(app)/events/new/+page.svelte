@@ -8,6 +8,7 @@
 	let description = $state('');
 	let date = $state('');
 	let location = $state('');
+	let capacity = $state('');
 	let error = $state('');
 	let loading = $state(false);
 	let unlockOpen = $state(false);
@@ -36,7 +37,11 @@
 			const res = await fetch('/api/events', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...payload, wrappedKey })
+				body: JSON.stringify({
+					...payload,
+					wrappedKey,
+					capacity: capacity ? Number(capacity) : undefined
+				})
 			});
 
 			if (!res.ok) throw new Error('Failed to create event');
@@ -66,6 +71,16 @@
 
 		<label for="location" class="mb-1 block text-sm font-medium">Location</label>
 		<input id="location" type="text" bind:value={location} class="mb-3 w-full rounded border p-2" />
+
+		<label for="capacity" class="mb-1 block text-sm font-medium">Capacity (optional)</label>
+		<input
+			id="capacity"
+			type="number"
+			min="1"
+			bind:value={capacity}
+			placeholder="Unlimited"
+			class="mb-3 w-full rounded border p-2"
+		/>
 
 		{#if error}
 			<p class="mb-3 text-sm text-red-600">{error}</p>

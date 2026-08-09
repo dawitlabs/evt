@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index';
-import { events, eventsKeys, users } from '$lib/server/db/schema';
+import { events, eventsKeys, users, rsvps } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { isManager } from '$lib/server/events/authz';
 import { listResolvablePendingInvites } from '$lib/server/events/pendingInvites';
@@ -33,11 +33,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const pendingInvites = isManager(membership.role) ? await listResolvablePendingInvites(eventId) : [];
 
+	const [myRsvp] = await db
+		.select({ status: rsvps.status })
+		.from(rsvps)
+		.where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, locals.user!.id)))
+		.limit(1);
+
 	return {
-		event: { id: event.id, ciphertext: event.ciphertext, nonce: event.nonce },
+		event: { id: event.id, ciphertext: event.ciphertext, nonce: event.nonce, capacity: event.capacity },
 		membership,
 		members,
 		pendingInvites,
-		isManager: isManager(membership.role)
+		isManager: isManager(membership.role),
+		myRsvpStatus: myRsvp?.status ?? null
 	};
 };

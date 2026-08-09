@@ -1,0 +1,5 @@
+{
+	"name": "evt-attendees",
+	"main": "party/attendees.ts",
+	"compatibilityDate": "2024-01-01"
+}
