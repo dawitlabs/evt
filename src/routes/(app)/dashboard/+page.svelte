@@ -6,6 +6,8 @@
 	let { data } = $props();
 </script>
 
+<svelte:head><title>Your events · Evt</title></svelte:head>
+
 <div class="mx-auto mt-8 max-w-md">
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-xl font-semibold text-neutral-900">Your events</h1>

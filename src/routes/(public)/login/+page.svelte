@@ -36,6 +36,8 @@
 	onMount(startLogin);
 </script>
 
+<svelte:head><title>Sign in · Evt</title></svelte:head>
+
 <div class="mx-auto mt-24 max-w-sm">
 	<div class="glass rounded-2xl p-8 text-center shadow-sm">
 		<span class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent-400">

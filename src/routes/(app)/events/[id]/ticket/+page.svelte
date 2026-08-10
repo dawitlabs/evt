@@ -6,6 +6,8 @@
 	let { data } = $props();
 </script>
 
+<svelte:head><title>Your ticket · Evt</title></svelte:head>
+
 <div class="mx-auto mt-8 max-w-sm text-center">
 	<div class="glass rounded-2xl p-8">
 		{#if data.checkedIn}

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import TicketIcon from 'phosphor-svelte/lib/TicketIcon';
+	import SignOutIcon from 'phosphor-svelte/lib/SignOutIcon';
 
-	let { children } = $props();
+	let { children, data } = $props();
 </script>
 
 <header class="glass sticky top-0 z-10">
@@ -12,6 +13,22 @@
 			</span>
 			Evt
 		</a>
+
+		<div class="ml-auto flex items-center gap-3">
+			{#if data.user.firstName ?? data.user.username}
+				<span class="text-sm text-neutral-600">{data.user.firstName ?? data.user.username}</span>
+			{/if}
+			<form method="POST" action="/auth/logout">
+				<button
+					type="submit"
+					aria-label="Sign out"
+					class="flex items-center gap-1.5 text-sm text-neutral-500 transition hover:text-neutral-900"
+				>
+					<SignOutIcon size={16} />
+					Sign out
+				</button>
+			</form>
+		</div>
 	</div>
 </header>
 

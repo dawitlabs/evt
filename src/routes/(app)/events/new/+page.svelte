@@ -45,6 +45,8 @@
 	}
 </script>
 
+<svelte:head><title>New event · Evt</title></svelte:head>
+
 <div class="mx-auto mt-8 max-w-md">
 	<div class="glass rounded-2xl p-6">
 		<h1 class="mb-6 text-xl font-semibold text-neutral-900">New event</h1>

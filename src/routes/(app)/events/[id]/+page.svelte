@@ -173,6 +173,8 @@
 	}
 </script>
 
+<svelte:head><title>{data.event.title} · Evt</title></svelte:head>
+
 <div class="mx-auto mt-8 max-w-md space-y-4">
 	{#if data.event.cancelled}
 		<div class="glass rounded-2xl border border-red-200 p-4 text-center">

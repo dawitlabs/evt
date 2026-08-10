@@ -71,6 +71,8 @@
 	onDestroy(() => stream?.getTracks().forEach((track) => track.stop()));
 </script>
 
+<svelte:head><title>Scan tickets · Evt</title></svelte:head>
+
 <div class="mx-auto mt-8 max-w-sm text-center">
 	<div class="glass overflow-hidden rounded-2xl p-4">
 		{#if cameraError}
