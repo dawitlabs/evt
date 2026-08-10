@@ -26,12 +26,15 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		throw redirect(303, '/login?error=expired');
 	}
 
-	const user = await upsertTelegramUser({
-		telegramId: data.id,
-		username: data.username,
-		firstName: data.first_name,
-		photoUrl: data.photo_url
-	});
+	const user = await upsertTelegramUser(
+		{
+			telegramId: data.id,
+			username: data.username,
+			firstName: data.first_name,
+			photoUrl: data.photo_url
+		},
+		url.origin
+	);
 
 	const { token, expiresAt } = await createSession(user.id);
 
@@ -43,5 +46,5 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		expires: expiresAt
 	});
 
-	throw redirect(303, user.publicKey ? '/dashboard' : '/setup-keys');
+	throw redirect(303, '/dashboard');
 };

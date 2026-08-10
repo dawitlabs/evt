@@ -10,7 +10,6 @@ declare global {
 				username: string | null;
 				firstName: string | null;
 				photoUrl: string | null;
-				publicKey: string | null;
 			} | null;
 		}
 		// interface PageData {}

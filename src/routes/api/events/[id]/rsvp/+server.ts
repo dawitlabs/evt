@@ -3,6 +3,7 @@ import { db } from '$lib/server/db/index';
 import { events, rsvps, tickets, users } from '$lib/server/db/schema';
 import { and, eq, count, asc } from 'drizzle-orm';
 import { getEventMembership } from '$lib/server/events/authz';
+import { encryptJson } from '$lib/server/crypto';
 import { sendTelegramMessage } from '$lib/server/telegram/bot';
 import { PartySocket } from 'partysocket';
 import { PARTYKIT_HOST } from '$env/static/private';
@@ -63,17 +64,16 @@ export const POST: RequestHandler = async ({ params, request, locals, url }) => 
 	}
 
 	const body: unknown = await request.json();
-	const { status, encryptedDetails, detailsNonce } = (body ?? {}) as Record<string, unknown>;
+	const { status, notes } = (body ?? {}) as Record<string, unknown>;
 
 	if (status !== 'going' && status !== 'maybe' && status !== 'declined') {
 		return json({ error: 'Invalid status' }, { status: 400 });
 	}
-	if (encryptedDetails !== undefined && typeof encryptedDetails !== 'string') {
-		return json({ error: 'Invalid details' }, { status: 400 });
+	if (notes !== undefined && typeof notes !== 'string') {
+		return json({ error: 'Invalid notes' }, { status: 400 });
 	}
-	if (detailsNonce !== undefined && typeof detailsNonce !== 'string') {
-		return json({ error: 'Invalid details' }, { status: 400 });
-	}
+
+	const details = notes?.trim() ? encryptJson({ notes: notes.trim() }) : null;
 
 	const [event] = await db.select({ capacity: events.capacity }).from(events).where(eq(events.id, eventId)).limit(1);
 	if (!event) {
@@ -100,15 +100,15 @@ export const POST: RequestHandler = async ({ params, request, locals, url }) => 
 			eventId,
 			userId: locals.user.id,
 			status: finalStatus,
-			encryptedDetails: encryptedDetails ?? null,
-			detailsNonce: detailsNonce ?? null
+			encryptedDetails: details?.ciphertext ?? null,
+			detailsNonce: details?.nonce ?? null
 		})
 		.onConflictDoUpdate({
 			target: [rsvps.eventId, rsvps.userId],
 			set: {
 				status: finalStatus,
-				encryptedDetails: encryptedDetails ?? null,
-				detailsNonce: detailsNonce ?? null,
+				encryptedDetails: details?.ciphertext ?? null,
+				detailsNonce: details?.nonce ?? null,
 				updatedAt: new Date()
 			}
 		});

@@ -18,7 +18,6 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 				username: users.username,
 				firstName: users.firstName,
 				photoUrl: users.photoUrl,
-				publicKey: users.publicKey,
 				expiresAt: sessions.expiresAt
 			})
 			.from(sessions)

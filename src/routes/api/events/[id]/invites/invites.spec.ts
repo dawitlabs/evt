@@ -27,12 +27,12 @@ describe('POST /api/events/[id]/invites', () => {
 	it('notifies the invitee when they are added directly to the event', async () => {
 		dbMock.setResults([
 			[{ role: 'owner' }], // getEventMembership
-			[{ id: 'user-2', publicKey: 'pk', telegramId: 'tg-2' }], // target lookup
+			[{ id: 'user-2', telegramId: 'tg-2' }], // target lookup
 			undefined // insert eventsKeys
 		]);
 
 		const res = await POST(
-			makeEvent({ body: { telegramUsername: '@bob', role: 'attendee', wrappedKey: 'wrapped' } })
+			makeEvent({ body: { telegramUsername: '@bob', role: 'attendee' } })
 		);
 
 		expect(await res.json()).toEqual({ status: 'added' });

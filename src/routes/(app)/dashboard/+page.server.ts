@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db/index';
 import { events, eventsKeys } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { decryptJson } from '$lib/server/crypto';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -8,7 +9,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.select({
 			eventId: events.id,
 			role: eventsKeys.role,
-			wrappedKey: eventsKeys.wrappedKey,
 			ciphertext: events.ciphertext,
 			nonce: events.nonce,
 			createdAt: events.createdAt
@@ -17,5 +17,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.innerJoin(events, eq(eventsKeys.eventId, events.id))
 		.where(eq(eventsKeys.userId, locals.user!.id));
 
-	return { events: rows };
+	return {
+		events: rows.map((row) => {
+			const details = decryptJson<{ title: string }>(row);
+			return { eventId: row.eventId, title: details.title, role: row.role, createdAt: row.createdAt };
+		})
+	};
 };

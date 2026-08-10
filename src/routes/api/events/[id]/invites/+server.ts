@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ params, request, locals, url }) => 
 	}
 
 	const body: unknown = await request.json();
-	const { telegramUsername, role, wrappedKey } = (body ?? {}) as Record<string, unknown>;
+	const { telegramUsername, role } = (body ?? {}) as Record<string, unknown>;
 
 	if (typeof telegramUsername !== 'string' || (role !== 'coorganizer' && role !== 'attendee')) {
 		return json({ error: 'Missing fields' }, { status: 400 });
@@ -35,21 +35,16 @@ export const POST: RequestHandler = async ({ params, request, locals, url }) => 
 	const normalized = normalizeTelegramUsername(telegramUsername);
 
 	const [target] = await db
-		.select({ id: users.id, publicKey: users.publicKey, telegramId: users.telegramId })
+		.select({ id: users.id, telegramId: users.telegramId })
 		.from(users)
 		.where(ilike(users.username, normalized))
 		.limit(1);
 
 	try {
-		if (target?.publicKey) {
-			if (typeof wrappedKey !== 'string') {
-				return json({ error: 'wrappedKey required' }, { status: 400 });
-			}
-
+		if (target) {
 			await db.insert(eventsKeys).values({
 				eventId,
 				userId: target.id,
-				wrappedKey,
 				role,
 				invitedBy: locals.user.id
 			});
@@ -69,7 +64,7 @@ export const POST: RequestHandler = async ({ params, request, locals, url }) => 
 		return json({ status: 'pending' });
 	} catch (error) {
 		if (isUniqueViolation(error)) {
-			return json({ error: target?.publicKey ? 'Already a member' : 'Already invited' }, { status: 409 });
+			return json({ error: target ? 'Already a member' : 'Already invited' }, { status: 409 });
 		}
 		throw error;
 	}

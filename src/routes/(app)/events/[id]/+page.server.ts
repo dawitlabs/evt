@@ -3,8 +3,16 @@ import { db } from '$lib/server/db/index';
 import { events, eventsKeys, users, rsvps } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { isManager } from '$lib/server/events/authz';
-import { listResolvablePendingInvites } from '$lib/server/events/pendingInvites';
+import { listPendingInvites } from '$lib/server/events/pendingInvites';
+import { decryptJson } from '$lib/server/crypto';
 import type { PageServerLoad } from './$types';
+
+interface EventDetails {
+	title: string;
+	description: string;
+	date: string;
+	location: string;
+}
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const eventId = params.id;
@@ -13,7 +21,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	if (!event) throw error(404, 'Not found');
 
 	const [membership] = await db
-		.select({ role: eventsKeys.role, wrappedKey: eventsKeys.wrappedKey })
+		.select({ role: eventsKeys.role })
 		.from(eventsKeys)
 		.where(and(eq(eventsKeys.eventId, eventId), eq(eventsKeys.userId, locals.user!.id)))
 		.limit(1);
@@ -31,7 +39,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.innerJoin(users, eq(eventsKeys.userId, users.id))
 		.where(eq(eventsKeys.eventId, eventId));
 
-	const pendingInvites = isManager(membership.role) ? await listResolvablePendingInvites(eventId) : [];
+	const pendingInvites = isManager(membership.role) ? await listPendingInvites(eventId) : [];
 
 	const [myRsvp] = await db
 		.select({ status: rsvps.status })
@@ -39,8 +47,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, locals.user!.id)))
 		.limit(1);
 
+	const details = decryptJson<EventDetails>(event);
+
 	return {
-		event: { id: event.id, ciphertext: event.ciphertext, nonce: event.nonce, capacity: event.capacity },
+		event: { id: event.id, ...details, capacity: event.capacity },
 		membership,
 		members,
 		pendingInvites,

@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import crypto from 'crypto';
 import { db } from '$lib/server/db/index';
 import { events, eventsKeys } from '$lib/server/db/schema';
+import { encryptJson } from '$lib/server/crypto';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -9,20 +10,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	if (!locals.user.publicKey) {
-		return json({ error: 'Setup incomplete' }, { status: 400 });
+	const body: unknown = await request.json();
+	const { title, description, date, location, capacity } = (body ?? {}) as Record<string, unknown>;
+
+	if (typeof title !== 'string' || !title.trim()) {
+		return json({ error: 'Title is required' }, { status: 400 });
 	}
 
-	const body: unknown = await request.json();
-	const { ciphertext, nonce, wrappedKey, capacity } = (body ?? {}) as Record<string, unknown>;
-
-	if (typeof ciphertext !== 'string' || typeof nonce !== 'string' || typeof wrappedKey !== 'string') {
-		return json({ error: 'Missing fields' }, { status: 400 });
+	if (
+		(description !== undefined && typeof description !== 'string') ||
+		(date !== undefined && typeof date !== 'string') ||
+		(location !== undefined && typeof location !== 'string')
+	) {
+		return json({ error: 'Invalid fields' }, { status: 400 });
 	}
 
 	if (capacity !== undefined && typeof capacity !== 'number') {
 		return json({ error: 'Invalid capacity' }, { status: 400 });
 	}
+
+	const { ciphertext, nonce } = encryptJson({
+		title: title.trim(),
+		description: description ?? '',
+		date: date ?? '',
+		location: location ?? ''
+	});
 
 	const eventId = crypto.randomUUID();
 
@@ -31,7 +43,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		db.insert(eventsKeys).values({
 			eventId,
 			userId: locals.user.id,
-			wrappedKey,
 			role: 'owner'
 		})
 	]);

@@ -1,8 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getUnlockedKey } from '$lib/crypto/session.svelte';
-	import { generateEventKey, encryptEventData, sealEventKeyFor } from '$lib/crypto/eventKey';
-	import UnlockPassphraseModal from '$lib/components/UnlockPassphraseModal.svelte';
 	import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
 
 	let title = $state('');
@@ -12,7 +9,6 @@
 	let capacity = $state('');
 	let error = $state('');
 	let loading = $state(false);
-	let unlockOpen = $state(false);
 
 	async function handleCreate() {
 		error = '';
@@ -22,25 +18,17 @@
 			return;
 		}
 
-		const unlocked = getUnlockedKey();
-		if (!unlocked) {
-			unlockOpen = true;
-			return;
-		}
-
 		loading = true;
 
 		try {
-			const eventKey = await generateEventKey();
-			const payload = await encryptEventData({ title, description, date, location }, eventKey);
-			const wrappedKey = await sealEventKeyFor(eventKey, unlocked.publicKey);
-
 			const res = await fetch('/api/events', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					...payload,
-					wrappedKey,
+					title,
+					description,
+					date,
+					location,
 					capacity: capacity ? Number(capacity) : undefined
 				})
 			});
@@ -97,5 +85,3 @@
 		</form>
 	</div>
 </div>
-
-<UnlockPassphraseModal bind:open={unlockOpen} onUnlocked={handleCreate} />

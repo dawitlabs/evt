@@ -18,11 +18,14 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	if (!row || row.expiresAt < new Date()) return json({ status: 'expired' });
 	if (row.status === 'pending' || !row.telegramId) return json({ status: 'pending' });
 
-	const user = await upsertTelegramUser({
-		telegramId: row.telegramId,
-		username: row.username,
-		firstName: row.firstName
-	});
+	const user = await upsertTelegramUser(
+		{
+			telegramId: row.telegramId,
+			username: row.username,
+			firstName: row.firstName
+		},
+		url.origin
+	);
 
 	const { token: sessionToken, expiresAt } = await createSession(user.id);
 
@@ -36,5 +39,5 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	await db.delete(telegramLoginTokens).where(eq(telegramLoginTokens.token, token));
 
-	return json({ status: 'verified', redirect: user.publicKey ? '/dashboard' : '/setup-keys' });
+	return json({ status: 'verified', redirect: '/dashboard' });
 };

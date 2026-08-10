@@ -6,10 +6,6 @@ export const users = pgTable('users', {
 	username: text('username'),
 	firstName: text('first_name'),
 	photoUrl: text('photo_url'),
-	publicKey: text('public_key'),
-	encryptedPrivateKey: text('encrypted_private_key'),
-	privateKeySalt: text('private_key_salt'),
-	privateKeyNonce: text('private_key_nonce'),
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
@@ -58,7 +54,6 @@ export const eventsKeys = pgTable(
 		userId: uuid('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		wrappedKey: text('wrapped_key').notNull(),
 		role: text('role', { enum: ['owner', 'coorganizer', 'attendee'] })
 			.notNull()
 			.default('attendee'),

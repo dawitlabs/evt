@@ -1,7 +1,9 @@
 import crypto from 'crypto';
 import { db } from '$lib/server/db/index';
-import { users, sessions } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, sessions, eventsKeys, pendingInvites } from '$lib/server/db/schema';
+import { eq, ilike } from 'drizzle-orm';
+import { normalizeTelegramUsername } from '$lib/server/events/username';
+import { sendTelegramMessage } from '$lib/server/telegram/bot';
 
 interface TelegramIdentity {
 	telegramId: string;
@@ -10,7 +12,24 @@ interface TelegramIdentity {
 	photoUrl?: string | null;
 }
 
-export async function upsertTelegramUser(identity: TelegramIdentity) {
+async function resolvePendingInvites(userId: string, telegramId: string, username: string, origin: string) {
+	const normalized = normalizeTelegramUsername(username);
+	const matches = await db.select().from(pendingInvites).where(ilike(pendingInvites.telegramUsername, normalized));
+	if (matches.length === 0) return;
+
+	await Promise.all(
+		matches.map(async (invite) => {
+			await db
+				.insert(eventsKeys)
+				.values({ eventId: invite.eventId, userId, role: invite.role, invitedBy: invite.invitedBy })
+				.onConflictDoNothing({ target: [eventsKeys.eventId, eventsKeys.userId] });
+			await db.delete(pendingInvites).where(eq(pendingInvites.id, invite.id));
+			await sendTelegramMessage(telegramId, `You've been added to an event: ${origin}/events/${invite.eventId}`);
+		})
+	);
+}
+
+export async function upsertTelegramUser(identity: TelegramIdentity, origin: string) {
 	const [existing] = await db
 		.select()
 		.from(users)
@@ -28,6 +47,10 @@ export async function upsertTelegramUser(identity: TelegramIdentity) {
 			photoUrl: identity.photoUrl ?? null
 		})
 		.returning();
+
+	if (identity.username) {
+		await resolvePendingInvites(created.id, identity.telegramId, identity.username, origin);
+	}
 
 	return created;
 }
