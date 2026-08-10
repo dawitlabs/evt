@@ -50,7 +50,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const details = decryptJson<EventDetails>(event);
 
 	return {
-		event: { id: event.id, ...details, capacity: event.capacity },
+		event: { id: event.id, ...details, capacity: event.capacity, cancelled: Boolean(event.cancelledAt) },
 		membership,
 		members,
 		pendingInvites,

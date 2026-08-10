@@ -43,6 +43,7 @@ describe('POST /api/checkin', () => {
 		verifyTicket.mockReturnValue({ ticketId: 'ticket-1', eventId: 'event-1', userId: 'user-1' });
 		dbMock.setResults([
 			[{ role: 'owner' }], // getEventMembership
+			[{ cancelledAt: null }], // event cancelled check
 			[{ id: 'ticket-1', checkedInAt: null }], // ticket lookup
 			undefined // update -> checked in
 		]);
@@ -57,6 +58,7 @@ describe('POST /api/checkin', () => {
 		const checkedInAt = new Date();
 		dbMock.setResults([
 			[{ role: 'owner' }], // getEventMembership
+			[{ cancelledAt: null }], // event cancelled check
 			[{ id: 'ticket-1', checkedInAt }] // already checked in
 		]);
 

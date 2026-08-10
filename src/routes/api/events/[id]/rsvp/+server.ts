@@ -1,45 +1,15 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index';
-import { events, rsvps, tickets, users } from '$lib/server/db/schema';
-import { and, eq, count, asc } from 'drizzle-orm';
+import { events, rsvps, tickets } from '$lib/server/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { getEventMembership } from '$lib/server/events/authz';
+import { countGoing, promoteFromWaitlist } from '$lib/server/events/waitlist';
 import { encryptJson } from '$lib/server/crypto';
-import { sendTelegramMessage } from '$lib/server/telegram/bot';
 import { PartySocket } from 'partysocket';
 import { PARTYKIT_HOST } from '$env/static/private';
 import type { RequestHandler } from './$types';
 
 type RsvpStatus = 'going' | 'maybe' | 'declined' | 'waitlisted';
-
-async function countGoing(eventId: string): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(rsvps)
-		.where(and(eq(rsvps.eventId, eventId), eq(rsvps.status, 'going')));
-	return row?.value ?? 0;
-}
-
-async function promoteFromWaitlist(eventId: string, origin: string): Promise<void> {
-	const [next] = await db
-		.select({ id: rsvps.id, userId: rsvps.userId })
-		.from(rsvps)
-		.where(and(eq(rsvps.eventId, eventId), eq(rsvps.status, 'waitlisted')))
-		.orderBy(asc(rsvps.createdAt))
-		.limit(1);
-
-	if (!next) return;
-
-	await db.update(rsvps).set({ status: 'going', updatedAt: new Date() }).where(eq(rsvps.id, next.id));
-	await db
-		.insert(tickets)
-		.values({ eventId, userId: next.userId })
-		.onConflictDoNothing({ target: [tickets.eventId, tickets.userId] });
-
-	const [promoted] = await db.select({ telegramId: users.telegramId }).from(users).where(eq(users.id, next.userId)).limit(1);
-	if (promoted) {
-		await sendTelegramMessage(promoted.telegramId, `You're off the waitlist — you're going! ${origin}/events/${eventId}`);
-	}
-}
 
 async function broadcastCount(eventId: string, goingCount: number): Promise<void> {
 	try {
@@ -75,9 +45,16 @@ export const POST: RequestHandler = async ({ params, request, locals, url }) => 
 
 	const details = notes?.trim() ? encryptJson({ notes: notes.trim() }) : null;
 
-	const [event] = await db.select({ capacity: events.capacity }).from(events).where(eq(events.id, eventId)).limit(1);
+	const [event] = await db
+		.select({ capacity: events.capacity, cancelledAt: events.cancelledAt })
+		.from(events)
+		.where(eq(events.id, eventId))
+		.limit(1);
 	if (!event) {
 		return json({ error: 'Not found' }, { status: 404 });
+	}
+	if (event.cancelledAt) {
+		return json({ error: 'This event was cancelled' }, { status: 400 });
 	}
 
 	const [existing] = await db

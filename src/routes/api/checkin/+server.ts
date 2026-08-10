@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index';
-import { tickets } from '$lib/server/db/schema';
+import { events, tickets } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { getEventMembership, isManager } from '$lib/server/events/authz';
 import { verifyTicket } from '$lib/server/tickets';
@@ -25,6 +25,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const membership = await getEventMembership(parsed.eventId, locals.user.id);
 	if (!membership || !isManager(membership.role)) {
 		return json({ error: 'Only hosts can check in guests' }, { status: 403 });
+	}
+
+	const [event] = await db
+		.select({ cancelledAt: events.cancelledAt })
+		.from(events)
+		.where(eq(events.id, parsed.eventId))
+		.limit(1);
+	if (event?.cancelledAt) {
+		return json({ error: 'This event was cancelled' }, { status: 400 });
 	}
 
 	const [ticket] = await db.select().from(tickets).where(eq(tickets.id, parsed.ticketId)).limit(1);

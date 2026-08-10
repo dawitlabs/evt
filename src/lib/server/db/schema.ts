@@ -27,6 +27,7 @@ export const events = pgTable('events', {
 	ciphertext: text('ciphertext').notNull(),
 	nonce: text('nonce').notNull(),
 	capacity: integer('capacity'),
+	cancelledAt: timestamp('cancelled_at'),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull()
 });

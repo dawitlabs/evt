@@ -14,6 +14,7 @@
 	import QrCodeIcon from 'phosphor-svelte/lib/QrCodeIcon';
 	import PaperPlaneTiltIcon from 'phosphor-svelte/lib/PaperPlaneTiltIcon';
 	import ClockIcon from 'phosphor-svelte/lib/ClockIcon';
+	import PencilSimpleIcon from 'phosphor-svelte/lib/PencilSimpleIcon';
 
 	let { data } = $props();
 
@@ -37,6 +38,64 @@
 	let rsvpNotes = $state('');
 	let rsvpLoading = $state(false);
 	let liveCount = $state<number | null>(null);
+
+	let editOpen = $state(false);
+	let editTitle = $state('');
+	let editDescription = $state('');
+	let editDate = $state('');
+	let editLocation = $state('');
+	let editCapacity = $state('');
+	let editStatus = $state('');
+	let editLoading = $state(false);
+
+	function openEdit() {
+		editTitle = data.event.title;
+		editDescription = data.event.description;
+		editDate = data.event.date;
+		editLocation = data.event.location;
+		editCapacity = data.event.capacity === null ? '' : String(data.event.capacity);
+		editStatus = '';
+		editOpen = true;
+	}
+
+	async function handleSaveEdit() {
+		editStatus = '';
+		if (!editTitle.trim()) {
+			editStatus = 'Title is required';
+			return;
+		}
+		editLoading = true;
+		try {
+			const res = await fetch(`/api/events/${data.event.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					title: editTitle,
+					description: editDescription,
+					date: editDate,
+					location: editLocation,
+					capacity: editCapacity ? Number(editCapacity) : null
+				})
+			});
+			if (!res.ok) {
+				const result: { error?: string } = await res.json();
+				editStatus = result.error ?? 'Could not save changes';
+				return;
+			}
+			editOpen = false;
+			await invalidateAll();
+		} catch {
+			editStatus = 'Something went wrong';
+		} finally {
+			editLoading = false;
+		}
+	}
+
+	async function handleCancelEvent() {
+		if (!confirm('Cancel this event? Everyone who RSVPed will be notified.')) return;
+		const res = await fetch(`/api/events/${data.event.id}`, { method: 'DELETE' });
+		if (res.ok) await invalidateAll();
+	}
 
 	$effect(() => {
 		const socket = new PartySocket({ host: PUBLIC_PARTYKIT_HOST, room: data.event.id });
@@ -90,6 +149,12 @@
 </script>
 
 <div class="mx-auto mt-8 max-w-md space-y-4">
+	{#if data.event.cancelled}
+		<div class="glass rounded-2xl border border-red-200 p-4 text-center">
+			<p class="text-sm font-medium text-red-700">This event was cancelled.</p>
+		</div>
+	{/if}
+
 	<div class="glass rounded-2xl p-6">
 		<h1 class="mb-3 text-xl font-semibold text-neutral-900">{data.event.title}</h1>
 		<div class="space-y-1.5 text-sm text-neutral-600">
@@ -106,6 +171,7 @@
 		{#if data.event.description}<p class="mt-3 text-sm text-neutral-700">{data.event.description}</p>{/if}
 	</div>
 
+	{#if !data.event.cancelled}
 	<div class="glass rounded-2xl p-6">
 		<h2 class="mb-3 text-sm font-medium text-neutral-700">Your RSVP</h2>
 		<div class="flex gap-2">
@@ -154,6 +220,7 @@
 			class="field-input"
 		></textarea>
 	</div>
+	{/if}
 
 	<div class="glass rounded-2xl p-6">
 		<h2 class="mb-3 flex items-center gap-2 text-sm font-medium text-neutral-700">
@@ -170,11 +237,49 @@
 		</ul>
 	</div>
 
-	{#if data.isManager}
+	{#if data.isManager && !data.event.cancelled}
 		<a href="/events/{data.event.id}/scan" class="btn-outline w-full">
 			<QrCodeIcon size={16} />
 			Scan tickets
 		</a>
+
+		<div class="glass rounded-2xl p-6">
+			<div class="flex items-center justify-between">
+				<h2 class="flex items-center gap-2 text-sm font-medium text-neutral-700">
+					<PencilSimpleIcon size={16} />
+					Edit event
+				</h2>
+				<button onclick={() => (editOpen ? (editOpen = false) : openEdit())} class="btn-outline px-2.5 py-1 text-xs">
+					{editOpen ? 'Close' : 'Edit'}
+				</button>
+			</div>
+			{#if editOpen}
+				<form onsubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} class="mt-4">
+					<label for="edit-title" class="field-label">Title</label>
+					<input id="edit-title" type="text" bind:value={editTitle} class="field-input mb-3" />
+
+					<label for="edit-description" class="field-label">Description</label>
+					<textarea id="edit-description" bind:value={editDescription} class="field-input mb-3"></textarea>
+
+					<label for="edit-date" class="field-label">Date</label>
+					<input id="edit-date" type="datetime-local" bind:value={editDate} class="field-input mb-3" />
+
+					<label for="edit-location" class="field-label">Location</label>
+					<input id="edit-location" type="text" bind:value={editLocation} class="field-input mb-3" />
+
+					<label for="edit-capacity" class="field-label">Capacity (optional)</label>
+					<input id="edit-capacity" type="number" min="1" bind:value={editCapacity} placeholder="Unlimited" class="field-input mb-3" />
+
+					{#if editStatus}
+						<p class="mb-3 text-sm text-red-600">{editStatus}</p>
+					{/if}
+
+					<button type="submit" disabled={editLoading} class="btn-primary w-full">
+						{editLoading ? 'Saving…' : 'Save changes'}
+					</button>
+				</form>
+			{/if}
+		</div>
 
 		<div class="glass rounded-2xl p-6">
 			<h2 class="mb-3 flex items-center gap-2 text-sm font-medium text-neutral-700">
@@ -215,5 +320,9 @@
 				</div>
 			</div>
 		{/if}
+
+		<button onclick={handleCancelEvent} class="btn-outline w-full text-red-600">
+			Cancel event
+		</button>
 	{/if}
 </div>

@@ -68,6 +68,18 @@ describe('POST /api/events/[id]/rsvp', () => {
 		expect(sendTelegramMessage).not.toHaveBeenCalled();
 	});
 
+	it('rejects RSVPs for a cancelled event', async () => {
+		dbMock.setResults([
+			[{ role: 'attendee' }], // getEventMembership
+			[{ capacity: 2, cancelledAt: new Date() }] // event is cancelled
+		]);
+
+		const res = await POST(makeEvent('going'));
+
+		expect(res.status).toBe(400);
+		expect(sendTelegramMessage).not.toHaveBeenCalled();
+	});
+
 	it('does not touch the waitlist for a fresh RSVP', async () => {
 		dbMock.setResults([
 			[{ role: 'attendee' }], // getEventMembership
