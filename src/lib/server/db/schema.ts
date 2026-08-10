@@ -107,3 +107,20 @@ export const rsvps = pgTable(
 	},
 	(table) => [uniqueIndex('rsvps_event_user_idx').on(table.eventId, table.userId)]
 );
+
+export const tickets = pgTable(
+	'tickets',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		eventId: uuid('event_id')
+			.notNull()
+			.references(() => events.id, { onDelete: 'cascade' }),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		checkedInAt: timestamp('checked_in_at'),
+		checkedInBy: uuid('checked_in_by').references(() => users.id),
+		createdAt: timestamp('created_at').defaultNow().notNull()
+	},
+	(table) => [uniqueIndex('tickets_event_user_idx').on(table.eventId, table.userId)]
+);
