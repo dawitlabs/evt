@@ -1,65 +1,38 @@
-# Svelte library
+# evt
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+Private events for your people — invites, RSVPs, and tickets in one place. Guests sign in with
+Telegram, RSVP (with a waitlist when an event fills up), and get a QR ticket that hosts scan at the
+door. Event details are encrypted at rest with a server-held key.
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+## Stack
 
-## Creating a project
+SvelteKit 2 (Svelte 5 runes) · Tailwind 4 · Drizzle + Neon Postgres · Telegram bot auth (grammy) ·
+PartyKit for live attendee counts · deployed on Vercel.
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Setup
 
 ```sh
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+pnpm install
+cp .env.example .env   # then fill in every value
+pnpm db:push
+pnpm dev
 ```
 
-To recreate this project with the same configuration:
+Environment variables (see `.env.example`):
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Neon Postgres connection string |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` / `TELEGRAM_WEBHOOK_SECRET` | Login bot and webhook |
+| `PARTYKIT_HOST` / `PUBLIC_PARTYKIT_HOST` | Live attendee counts |
+| `TICKET_SIGNING_SECRET` | HMAC key for ticket QR tokens — `openssl rand -hex 32` |
+| `EVENT_DATA_KEY` | AES-256-GCM key for event data at rest — `openssl rand -base64 32` |
+
+Rotating `EVENT_DATA_KEY` makes existing event data unreadable; there is no re-encryption path yet.
+
+## Checks
 
 ```sh
-# recreate this project
-bun x sv@0.17.0 create --template library --types ts --add prettier eslint vitest="usages:unit,component" playwright tailwindcss="plugins:none" sveltekit-adapter="adapter:vercel" drizzle="database:postgresql+postgresql:neon" paraglide="languageTags:en, es, ch, de, am+demo:yes" ai-tools="ide:claude-code+delivery:plugin" --install bun evt
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
-
-## Building
-
-To build your library:
-
-```sh
-npm pack
-```
-
-To create a production version of your showcase app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
-
-## Publishing
-
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
-
-```sh
-npm publish
+pnpm check   # svelte-check, TypeScript strict
+pnpm test    # vitest
 ```
