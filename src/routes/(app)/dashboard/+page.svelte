@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ROLE_LABELS } from '$lib/roles';
 	import PlusIcon from 'phosphor-svelte/lib/PlusIcon';
 	import CalendarBlankIcon from 'phosphor-svelte/lib/CalendarBlankIcon';
 
@@ -24,7 +25,7 @@
 			{#each data.events as event (event.eventId)}
 				<li class="glass rounded-xl p-4 transition hover:bg-white/80">
 					<a href="/events/{event.eventId}" class="font-medium text-neutral-900">{event.title}</a>
-					<span class="ml-1 text-xs text-neutral-500">({event.role})</span>
+					<span class="ml-1 text-xs text-neutral-500">{ROLE_LABELS[event.role]}</span>
 				</li>
 			{/each}
 		</ul>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { ROLE_LABELS } from '$lib/roles';
 	import PartySocket from 'partysocket';
 	import { PUBLIC_PARTYKIT_HOST } from '$env/static/public';
 	import CalendarBlankIcon from 'phosphor-svelte/lib/CalendarBlankIcon';
@@ -60,7 +61,7 @@
 			if (!res.ok) {
 				inviteStatus = result.error ?? 'Failed to invite';
 			} else {
-				inviteStatus = result.status === 'added' ? 'Added to event' : 'Invite pending — they need to sign up';
+				inviteStatus = result.status === 'added' ? "They're in — we let them know." : "Invite saved — we'll add them as soon as they join.";
 				inviteUsername = '';
 				await invalidateAll();
 			}
@@ -145,7 +146,7 @@
 				View your ticket
 			</a>
 		{/if}
-		<label for="rsvp-notes" class="field-label mt-4">Notes (optional, encrypted)</label>
+		<label for="rsvp-notes" class="field-label mt-4">Notes (optional)</label>
 		<textarea
 			id="rsvp-notes"
 			bind:value={rsvpNotes}
@@ -157,13 +158,13 @@
 	<div class="glass rounded-2xl p-6">
 		<h2 class="mb-3 flex items-center gap-2 text-sm font-medium text-neutral-700">
 			<UsersIcon size={16} />
-			Members
+			Guests
 		</h2>
 		<ul class="space-y-1 text-sm">
 			{#each data.members as member (member.userId)}
 				<li class="flex items-center justify-between">
 					<span>{member.firstName ?? member.username ?? member.userId}</span>
-					<span class="text-xs text-neutral-500">{member.role}</span>
+					<span class="text-xs text-neutral-500">{ROLE_LABELS[member.role]}</span>
 				</li>
 			{/each}
 		</ul>
@@ -178,7 +179,7 @@
 		<div class="glass rounded-2xl p-6">
 			<h2 class="mb-3 flex items-center gap-2 text-sm font-medium text-neutral-700">
 				<PaperPlaneTiltIcon size={16} />
-				Invite someone
+				Invite a guest
 			</h2>
 			<form onsubmit={(e) => { e.preventDefault(); handleInvite(); }} class="flex gap-2">
 				<input
@@ -188,8 +189,8 @@
 					class="field-input flex-1"
 				/>
 				<select bind:value={inviteRole} class="field-input w-auto">
-					<option value="attendee">Attendee</option>
-					<option value="coorganizer">Co-organizer</option>
+					<option value="attendee">Guest</option>
+					<option value="coorganizer">Co-host</option>
 				</select>
 				<button type="submit" disabled={inviteLoading} class="btn-primary">Invite</button>
 			</form>
@@ -204,10 +205,10 @@
 				<div class="space-y-2">
 					{#each data.pendingInvites as invite (invite.id)}
 						<div class="flex items-center justify-between rounded-lg border border-neutral-200 bg-white/50 p-2.5 text-sm">
-							<span>@{invite.telegramUsername} ({invite.role})</span>
+							<span>@{invite.telegramUsername} · {ROLE_LABELS[invite.role]}</span>
 							<span class="flex items-center gap-1 text-xs text-neutral-400">
 								<ClockIcon size={14} />
-								Waiting for them to sign up
+								We'll add them when they join
 							</span>
 						</div>
 					{/each}

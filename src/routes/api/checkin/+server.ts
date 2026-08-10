@@ -19,12 +19,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	const parsed = verifyTicket(token);
 	if (!parsed) {
-		return json({ error: 'Invalid or tampered ticket' }, { status: 400 });
+		return json({ error: "This ticket isn't valid" }, { status: 400 });
 	}
 
 	const membership = await getEventMembership(parsed.eventId, locals.user.id);
 	if (!membership || !isManager(membership.role)) {
-		return json({ error: 'Not authorized to check in guests for this event' }, { status: 403 });
+		return json({ error: 'Only hosts can check in guests' }, { status: 403 });
 	}
 
 	const [ticket] = await db.select().from(tickets).where(eq(tickets.id, parsed.ticketId)).limit(1);

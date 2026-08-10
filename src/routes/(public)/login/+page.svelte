@@ -42,7 +42,7 @@
 			<TicketIcon size={24} weight="fill" />
 		</span>
 		<h1 class="mb-1 text-lg font-semibold text-neutral-900">Welcome to Evt</h1>
-		<p class="mb-6 text-sm text-neutral-600">End-to-end encrypted events, invite-only.</p>
+		<p class="mb-6 text-sm text-neutral-600">Private events for your people — invites, RSVPs, and tickets in one place.</p>
 
 		{#if error}
 			<p class="mb-4 flex items-center justify-center gap-2 text-sm text-red-600">
