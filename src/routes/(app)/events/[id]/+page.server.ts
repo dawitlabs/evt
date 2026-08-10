@@ -48,13 +48,20 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.limit(1);
 
 	const details = decryptJson<EventDetails>(event);
+	const manager = isManager(membership.role);
 
 	return {
-		event: { id: event.id, ...details, capacity: event.capacity, cancelled: Boolean(event.cancelledAt) },
+		event: {
+			id: event.id,
+			...details,
+			capacity: event.capacity,
+			cancelled: Boolean(event.cancelledAt),
+			inviteToken: manager ? event.inviteToken : null
+		},
 		membership,
 		members,
 		pendingInvites,
-		isManager: isManager(membership.role),
+		isManager: manager,
 		myRsvpStatus: myRsvp?.status ?? null
 	};
 };

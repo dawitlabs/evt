@@ -39,5 +39,9 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	await db.delete(telegramLoginTokens).where(eq(telegramLoginTokens.token, token));
 
-	return json({ status: 'verified', redirect: '/dashboard' });
+	const next = cookies.get('next');
+	if (next) cookies.delete('next', { path: '/' });
+	const safeNext = next?.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+
+	return json({ status: 'verified', redirect: safeNext });
 };

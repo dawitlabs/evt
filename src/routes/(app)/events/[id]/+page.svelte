@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { ROLE_LABELS } from '$lib/roles';
 	import PartySocket from 'partysocket';
 	import { PUBLIC_PARTYKIT_HOST } from '$env/static/public';
@@ -15,6 +16,7 @@
 	import PaperPlaneTiltIcon from 'phosphor-svelte/lib/PaperPlaneTiltIcon';
 	import ClockIcon from 'phosphor-svelte/lib/ClockIcon';
 	import PencilSimpleIcon from 'phosphor-svelte/lib/PencilSimpleIcon';
+	import LinkIcon from 'phosphor-svelte/lib/LinkIcon';
 
 	let { data } = $props();
 
@@ -91,6 +93,29 @@
 		}
 	}
 
+	let shareLoading = $state(false);
+	let shareCopied = $state(false);
+	let shareUrl = $derived(`${page.url.origin}/join/${data.event.inviteToken}`);
+
+	async function toggleShareLink() {
+		shareLoading = true;
+		try {
+			const res = await fetch(`/api/events/${data.event.id}/share-link`, {
+				method: data.event.inviteToken ? 'DELETE' : 'POST'
+			});
+			if (res.ok) await invalidateAll();
+		} finally {
+			shareLoading = false;
+		}
+	}
+
+	async function copyShareLink() {
+		if (!data.event.inviteToken) return;
+		await navigator.clipboard.writeText(shareUrl);
+		shareCopied = true;
+		setTimeout(() => (shareCopied = false), 2000);
+	}
+
 	async function handleCancelEvent() {
 		if (!confirm('Cancel this event? Everyone who RSVPed will be notified.')) return;
 		const res = await fetch(`/api/events/${data.event.id}`, { method: 'DELETE' });
@@ -159,7 +184,12 @@
 		<h1 class="mb-3 text-xl font-semibold text-neutral-900">{data.event.title}</h1>
 		<div class="space-y-1.5 text-sm text-neutral-600">
 			{#if data.event.date}
-				<p class="flex items-center gap-2"><CalendarBlankIcon size={16} />{data.event.date}</p>
+				<p class="flex items-center gap-2">
+					<CalendarBlankIcon size={16} />{data.event.date}
+					<a href="/events/{data.event.id}/calendar.ics" class="text-xs font-medium text-accent-700 hover:underline">
+						Add to calendar
+					</a>
+				</p>
 			{/if}
 			{#if data.event.location}
 				<p class="flex items-center gap-2"><MapPinIcon size={16} />{data.event.location}</p>
@@ -320,6 +350,29 @@
 				</div>
 			</div>
 		{/if}
+
+		<div class="glass rounded-2xl p-6">
+			<h2 class="mb-3 flex items-center gap-2 text-sm font-medium text-neutral-700">
+				<LinkIcon size={16} />
+				Share link
+			</h2>
+			{#if data.event.inviteToken}
+				<p class="mb-3 truncate rounded-lg border border-neutral-200 bg-white/50 p-2.5 text-xs text-neutral-600">
+					{shareUrl}
+				</p>
+				<div class="flex gap-2">
+					<button onclick={copyShareLink} class="btn-primary flex-1">
+						{shareCopied ? 'Copied!' : 'Copy link'}
+					</button>
+					<button onclick={toggleShareLink} disabled={shareLoading} class="btn-outline">Turn off</button>
+				</div>
+			{:else}
+				<p class="mb-3 text-sm text-neutral-600">Anyone with the link can join as a guest.</p>
+				<button onclick={toggleShareLink} disabled={shareLoading} class="btn-outline w-full">
+					Create share link
+				</button>
+			{/if}
+		</div>
 
 		<button onclick={handleCancelEvent} class="btn-outline w-full text-red-600">
 			Cancel event

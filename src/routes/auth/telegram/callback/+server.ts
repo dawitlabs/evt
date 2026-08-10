@@ -46,5 +46,9 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		expires: expiresAt
 	});
 
-	throw redirect(303, '/dashboard');
+	const next = cookies.get('next');
+	if (next) cookies.delete('next', { path: '/' });
+	const safeNext = next?.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+
+	throw redirect(303, safeNext);
 };
