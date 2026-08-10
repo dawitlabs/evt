@@ -217,6 +217,9 @@
 			{#if rsvpStatus === 'waitlisted'}
 				<p class="mt-2 text-sm text-amber-600">You're on the waitlist — we'll let you know if a spot opens up.</p>
 			{/if}
+			{#if rsvpStatus === 'going'}
+				<a href="/events/{data.event.id}/ticket" class="mt-2 inline-block text-sm underline">View your ticket</a>
+			{/if}
 			<label for="rsvp-notes" class="mt-3 mb-1 block text-sm font-medium">Notes (optional, encrypted)</label>
 			<textarea
 				id="rsvp-notes"
@@ -236,6 +239,10 @@
 		</div>
 
 		{#if data.isManager}
+			<div class="mt-6 border-t pt-6">
+				<a href="/events/{data.event.id}/scan" class="text-sm underline">Scan tickets</a>
+			</div>
+
 			<div class="mt-6 border-t pt-6">
 				<h2 class="mb-2 text-sm font-medium text-gray-700">Invite someone</h2>
 				<form onsubmit={(e) => { e.preventDefault(); handleInvite(); }} class="flex gap-2">
