@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index';
-import { events, rsvps, users } from '$lib/server/db/schema';
+import { events, rsvps, tickets, users } from '$lib/server/db/schema';
 import { and, eq, count, asc } from 'drizzle-orm';
 import { getEventMembership } from '$lib/server/events/authz';
 import { sendTelegramMessage } from '$lib/server/telegram/bot';
@@ -29,6 +29,10 @@ async function promoteFromWaitlist(eventId: string, origin: string): Promise<voi
 	if (!next) return;
 
 	await db.update(rsvps).set({ status: 'going', updatedAt: new Date() }).where(eq(rsvps.id, next.id));
+	await db
+		.insert(tickets)
+		.values({ eventId, userId: next.userId })
+		.onConflictDoNothing({ target: [tickets.eventId, tickets.userId] });
 
 	const [promoted] = await db.select({ telegramId: users.telegramId }).from(users).where(eq(users.id, next.userId)).limit(1);
 	if (promoted) {
@@ -108,6 +112,13 @@ export const POST: RequestHandler = async ({ params, request, locals, url }) => 
 				updatedAt: new Date()
 			}
 		});
+
+	if (finalStatus === 'going') {
+		await db
+			.insert(tickets)
+			.values({ eventId, userId: locals.user.id })
+			.onConflictDoNothing({ target: [tickets.eventId, tickets.userId] });
+	}
 
 	if (existing?.status === 'going' && finalStatus !== 'going') {
 		await promoteFromWaitlist(eventId, url.origin);

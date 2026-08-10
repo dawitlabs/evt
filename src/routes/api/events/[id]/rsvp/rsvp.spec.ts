@@ -38,6 +38,7 @@ describe('POST /api/events/[id]/rsvp', () => {
 			undefined, // insert rsvps onConflictDoUpdate
 			[{ id: 'rsvp-9', userId: 'user-9' }], // next waitlisted rsvp
 			undefined, // update rsvps -> going
+			undefined, // insert tickets for the promoted user
 			[{ telegramId: 'tg-9' }], // promoted user's telegram id
 			[{ value: 1 }] // countGoing for broadcast
 		]);
@@ -73,6 +74,7 @@ describe('POST /api/events/[id]/rsvp', () => {
 			[{ capacity: null }], // event capacity: uncapped
 			[], // existing rsvp: none
 			undefined, // insert rsvps onConflictDoUpdate
+			undefined, // insert tickets for this user
 			[{ value: 1 }] // countGoing for broadcast
 		]);
 
