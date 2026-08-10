@@ -3,9 +3,10 @@ import { db } from '$lib/server/db/index';
 import { users, eventsKeys, pendingInvites } from '$lib/server/db/schema';
 import { and, eq, ilike } from 'drizzle-orm';
 import { getEventMembership, isManager } from '$lib/server/events/authz';
+import { sendTelegramMessage } from '$lib/server/telegram/bot';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ params, request, locals }) => {
+export const POST: RequestHandler = async ({ params, request, locals, url }) => {
 	if (!locals.user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
@@ -35,7 +36,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	}
 
 	const [target] = await db
-		.select({ id: users.id, publicKey: users.publicKey })
+		.select({ id: users.id, publicKey: users.publicKey, telegramId: users.telegramId })
 		.from(users)
 		.where(ilike(users.username, pending.telegramUsername))
 		.limit(1);
@@ -54,6 +55,11 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		}),
 		db.delete(pendingInvites).where(eq(pendingInvites.id, pendingId))
 	]);
+
+	await sendTelegramMessage(
+		target.telegramId,
+		`You now have access to an event you were invited to: ${url.origin}/events/${eventId}`
+	);
 
 	return json({ status: 'resolved' });
 };
