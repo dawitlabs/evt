@@ -3,6 +3,7 @@
 	import { getUnlockedKey } from '$lib/crypto/session.svelte';
 	import { generateEventKey, encryptEventData, sealEventKeyFor } from '$lib/crypto/eventKey';
 	import UnlockPassphraseModal from '$lib/components/UnlockPassphraseModal.svelte';
+	import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
 
 	let title = $state('');
 	let description = $state('');
@@ -56,40 +57,45 @@
 	}
 </script>
 
-<div class="mx-auto mt-16 max-w-md">
-	<h1 class="mb-6 text-xl font-semibold">New event</h1>
+<div class="mx-auto mt-8 max-w-md">
+	<div class="glass rounded-2xl p-6">
+		<h1 class="mb-6 text-xl font-semibold text-neutral-900">New event</h1>
 
-	<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
-		<label for="title" class="mb-1 block text-sm font-medium">Title</label>
-		<input id="title" type="text" bind:value={title} class="mb-3 w-full rounded border p-2" />
+		<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
+			<label for="title" class="field-label">Title</label>
+			<input id="title" type="text" bind:value={title} class="field-input mb-3" />
 
-		<label for="description" class="mb-1 block text-sm font-medium">Description</label>
-		<textarea id="description" bind:value={description} class="mb-3 w-full rounded border p-2"></textarea>
+			<label for="description" class="field-label">Description</label>
+			<textarea id="description" bind:value={description} class="field-input mb-3"></textarea>
 
-		<label for="date" class="mb-1 block text-sm font-medium">Date</label>
-		<input id="date" type="datetime-local" bind:value={date} class="mb-3 w-full rounded border p-2" />
+			<label for="date" class="field-label">Date</label>
+			<input id="date" type="datetime-local" bind:value={date} class="field-input mb-3" />
 
-		<label for="location" class="mb-1 block text-sm font-medium">Location</label>
-		<input id="location" type="text" bind:value={location} class="mb-3 w-full rounded border p-2" />
+			<label for="location" class="field-label">Location</label>
+			<input id="location" type="text" bind:value={location} class="field-input mb-3" />
 
-		<label for="capacity" class="mb-1 block text-sm font-medium">Capacity (optional)</label>
-		<input
-			id="capacity"
-			type="number"
-			min="1"
-			bind:value={capacity}
-			placeholder="Unlimited"
-			class="mb-3 w-full rounded border p-2"
-		/>
+			<label for="capacity" class="field-label">Capacity (optional)</label>
+			<input
+				id="capacity"
+				type="number"
+				min="1"
+				bind:value={capacity}
+				placeholder="Unlimited"
+				class="field-input mb-3"
+			/>
 
-		{#if error}
-			<p class="mb-3 text-sm text-red-600">{error}</p>
-		{/if}
+			{#if error}
+				<p class="mb-3 flex items-center gap-2 text-sm text-red-600">
+					<WarningCircleIcon size={16} />
+					{error}
+				</p>
+			{/if}
 
-		<button type="submit" disabled={loading} class="w-full rounded bg-black p-2 text-white">
-			{loading ? 'Creating…' : 'Create event'}
-		</button>
-	</form>
+			<button type="submit" disabled={loading} class="btn-primary w-full">
+				{loading ? 'Creating…' : 'Create event'}
+			</button>
+		</form>
+	</div>
 </div>
 
 <UnlockPassphraseModal bind:open={unlockOpen} onUnlocked={handleCreate} />

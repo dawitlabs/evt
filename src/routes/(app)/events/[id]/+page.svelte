@@ -5,6 +5,20 @@
 	import UnlockPassphraseModal from '$lib/components/UnlockPassphraseModal.svelte';
 	import PartySocket from 'partysocket';
 	import { PUBLIC_PARTYKIT_HOST } from '$env/static/public';
+	import LockKeyOpenIcon from 'phosphor-svelte/lib/LockKeyOpenIcon';
+	import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+	import SpinnerIcon from 'phosphor-svelte/lib/SpinnerIcon';
+	import CalendarBlankIcon from 'phosphor-svelte/lib/CalendarBlankIcon';
+	import MapPinIcon from 'phosphor-svelte/lib/MapPinIcon';
+	import UsersIcon from 'phosphor-svelte/lib/UsersIcon';
+	import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+	import QuestionIcon from 'phosphor-svelte/lib/QuestionIcon';
+	import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
+	import ClockCountdownIcon from 'phosphor-svelte/lib/ClockCountdownIcon';
+	import TicketIcon from 'phosphor-svelte/lib/TicketIcon';
+	import QrCodeIcon from 'phosphor-svelte/lib/QrCodeIcon';
+	import PaperPlaneTiltIcon from 'phosphor-svelte/lib/PaperPlaneTiltIcon';
+	import ClockIcon from 'phosphor-svelte/lib/ClockIcon';
 
 	let { data } = $props();
 
@@ -172,116 +186,155 @@
 	}
 </script>
 
-<div class="mx-auto mt-16 max-w-md">
+<div class="mx-auto mt-8 max-w-md space-y-4">
 	{#if !getUnlockedKey()}
-		<p class="mb-3 text-sm text-gray-600">Unlock your key to view this event.</p>
-		<button onclick={() => (unlockOpen = true)} class="rounded bg-black p-2 text-sm text-white">
-			Unlock
-		</button>
+		<div class="glass rounded-2xl p-6 text-center">
+			<p class="mb-3 text-sm text-neutral-600">Unlock your key to view this event.</p>
+			<button onclick={() => (unlockOpen = true)} class="btn-primary">
+				<LockKeyOpenIcon size={16} weight="fill" />
+				Unlock
+			</button>
+		</div>
 	{:else if decryptError}
-		<p class="text-sm text-red-600">{decryptError}</p>
+		<p class="flex items-center gap-2 text-sm text-red-600">
+			<WarningCircleIcon size={16} />
+			{decryptError}
+		</p>
 	{:else if details === null}
-		<p class="text-sm text-gray-600">Decrypting…</p>
+		<p class="flex items-center gap-2 text-sm text-neutral-500">
+			<SpinnerIcon size={16} class="animate-spin" />
+			Decrypting…
+		</p>
 	{:else}
-		<h1 class="mb-2 text-xl font-semibold">{details.title}</h1>
-		{#if details.date}<p class="text-sm text-gray-600">{details.date}</p>{/if}
-		{#if details.location}<p class="text-sm text-gray-600">{details.location}</p>{/if}
-		{#if details.description}<p class="mt-3 text-sm">{details.description}</p>{/if}
-		{#if liveCount !== null}<p class="mt-2 text-sm text-gray-500">{liveCount} going</p>{/if}
+		<div class="glass rounded-2xl p-6">
+			<h1 class="mb-3 text-xl font-semibold text-neutral-900">{details.title}</h1>
+			<div class="space-y-1.5 text-sm text-neutral-600">
+				{#if details.date}
+					<p class="flex items-center gap-2"><CalendarBlankIcon size={16} />{details.date}</p>
+				{/if}
+				{#if details.location}
+					<p class="flex items-center gap-2"><MapPinIcon size={16} />{details.location}</p>
+				{/if}
+				{#if liveCount !== null}
+					<p class="flex items-center gap-2"><UsersIcon size={16} />{liveCount} going</p>
+				{/if}
+			</div>
+			{#if details.description}<p class="mt-3 text-sm text-neutral-700">{details.description}</p>{/if}
+		</div>
 
-		<div class="mt-6 border-t pt-6">
-			<h2 class="mb-2 text-sm font-medium text-gray-700">Your RSVP</h2>
+		<div class="glass rounded-2xl p-6">
+			<h2 class="mb-3 text-sm font-medium text-neutral-700">Your RSVP</h2>
 			<div class="flex gap-2">
 				<button
 					onclick={() => setRsvp('going')}
 					disabled={rsvpLoading}
-					class="rounded border px-3 py-1.5 text-sm {rsvpStatus === 'going' ? 'bg-black text-white' : ''}"
+					class={rsvpStatus === 'going' ? 'btn-accent flex-1' : 'btn-outline flex-1'}
 				>
+					<CheckCircleIcon size={16} weight={rsvpStatus === 'going' ? 'fill' : 'regular'} />
 					Going
 				</button>
 				<button
 					onclick={() => setRsvp('maybe')}
 					disabled={rsvpLoading}
-					class="rounded border px-3 py-1.5 text-sm {rsvpStatus === 'maybe' ? 'bg-black text-white' : ''}"
+					class={rsvpStatus === 'maybe' ? 'btn-accent flex-1' : 'btn-outline flex-1'}
 				>
+					<QuestionIcon size={16} weight={rsvpStatus === 'maybe' ? 'fill' : 'regular'} />
 					Maybe
 				</button>
 				<button
 					onclick={() => setRsvp('declined')}
 					disabled={rsvpLoading}
-					class="rounded border px-3 py-1.5 text-sm {rsvpStatus === 'declined' ? 'bg-black text-white' : ''}"
+					class={rsvpStatus === 'declined' ? 'btn-accent flex-1' : 'btn-outline flex-1'}
 				>
+					<XCircleIcon size={16} weight={rsvpStatus === 'declined' ? 'fill' : 'regular'} />
 					Can't go
 				</button>
 			</div>
 			{#if rsvpStatus === 'waitlisted'}
-				<p class="mt-2 text-sm text-amber-600">You're on the waitlist — we'll let you know if a spot opens up.</p>
+				<p class="mt-3 flex items-center gap-2 text-sm text-amber-600">
+					<ClockCountdownIcon size={16} />
+					You're on the waitlist — we'll let you know if a spot opens up.
+				</p>
 			{/if}
 			{#if rsvpStatus === 'going'}
-				<a href="/events/{data.event.id}/ticket" class="mt-2 inline-block text-sm underline">View your ticket</a>
+				<a href="/events/{data.event.id}/ticket" class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent-700 hover:underline">
+					<TicketIcon size={16} weight="fill" />
+					View your ticket
+				</a>
 			{/if}
-			<label for="rsvp-notes" class="mt-3 mb-1 block text-sm font-medium">Notes (optional, encrypted)</label>
+			<label for="rsvp-notes" class="field-label mt-4">Notes (optional, encrypted)</label>
 			<textarea
 				id="rsvp-notes"
 				bind:value={rsvpNotes}
 				placeholder="Dietary restrictions, plus-ones, etc."
-				class="w-full rounded border p-2 text-sm"
+				class="field-input"
 			></textarea>
 		</div>
 
-		<div class="mt-6 border-t pt-6">
-			<h2 class="mb-2 text-sm font-medium text-gray-700">Members</h2>
+		<div class="glass rounded-2xl p-6">
+			<h2 class="mb-3 flex items-center gap-2 text-sm font-medium text-neutral-700">
+				<UsersIcon size={16} />
+				Members
+			</h2>
 			<ul class="space-y-1 text-sm">
 				{#each data.members as member (member.userId)}
-					<li>{member.firstName ?? member.username ?? member.userId} — {member.role}</li>
+					<li class="flex items-center justify-between">
+						<span>{member.firstName ?? member.username ?? member.userId}</span>
+						<span class="text-xs text-neutral-500">{member.role}</span>
+					</li>
 				{/each}
 			</ul>
 		</div>
 
 		{#if data.isManager}
-			<div class="mt-6 border-t pt-6">
-				<a href="/events/{data.event.id}/scan" class="text-sm underline">Scan tickets</a>
-			</div>
+			<a href="/events/{data.event.id}/scan" class="btn-outline w-full">
+				<QrCodeIcon size={16} />
+				Scan tickets
+			</a>
 
-			<div class="mt-6 border-t pt-6">
-				<h2 class="mb-2 text-sm font-medium text-gray-700">Invite someone</h2>
+			<div class="glass rounded-2xl p-6">
+				<h2 class="mb-3 flex items-center gap-2 text-sm font-medium text-neutral-700">
+					<PaperPlaneTiltIcon size={16} />
+					Invite someone
+				</h2>
 				<form onsubmit={(e) => { e.preventDefault(); handleInvite(); }} class="flex gap-2">
 					<input
 						type="text"
 						bind:value={inviteUsername}
 						placeholder="Telegram username"
-						class="flex-1 rounded border p-2 text-sm"
+						class="field-input flex-1"
 					/>
-					<select bind:value={inviteRole} class="rounded border p-2 text-sm">
+					<select bind:value={inviteRole} class="field-input w-auto">
 						<option value="attendee">Attendee</option>
 						<option value="coorganizer">Co-organizer</option>
 					</select>
-					<button type="submit" disabled={inviteLoading} class="rounded bg-black px-3 py-2 text-sm text-white">
-						Invite
-					</button>
+					<button type="submit" disabled={inviteLoading} class="btn-primary">Invite</button>
 				</form>
 				{#if inviteStatus}
-					<p class="mt-2 text-sm text-gray-600">{inviteStatus}</p>
+					<p class="mt-2 text-sm text-neutral-600">{inviteStatus}</p>
 				{/if}
 			</div>
 
 			{#if data.pendingInvites.length > 0}
-				<div class="mt-6 border-t pt-6">
-					<h2 class="mb-2 text-sm font-medium text-gray-700">Pending invites</h2>
+				<div class="glass rounded-2xl p-6">
+					<h2 class="mb-3 text-sm font-medium text-neutral-700">Pending invites</h2>
 					<div class="space-y-2">
 						{#each data.pendingInvites as invite (invite.id)}
-							<div class="flex items-center justify-between rounded border p-2 text-sm">
+							<div class="flex items-center justify-between rounded-lg border border-neutral-200 bg-white/50 p-2.5 text-sm">
 								<span>@{invite.telegramUsername} ({invite.role})</span>
 								{#if invite.resolvable}
 									<button
 										onclick={() => resolveInvite(invite)}
 										disabled={resolvingId === invite.id}
-										class="rounded bg-black px-2 py-1 text-xs text-white"
+										class="btn-accent px-2.5 py-1 text-xs"
 									>
 										{resolvingId === invite.id ? 'Granting…' : 'Grant access'}
 									</button>
 								{:else}
-									<span class="text-xs text-gray-400">Waiting for them to sign up</span>
+									<span class="flex items-center gap-1 text-xs text-neutral-400">
+										<ClockIcon size={14} />
+										Waiting for them to sign up
+									</span>
 								{/if}
 							</div>
 						{/each}

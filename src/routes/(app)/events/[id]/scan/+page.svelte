@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import jsQR from 'jsqr';
+	import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+	import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+	import QrCodeIcon from 'phosphor-svelte/lib/QrCodeIcon';
 
 	let video: HTMLVideoElement;
 	let canvas: HTMLCanvasElement;
@@ -68,16 +71,35 @@
 	onDestroy(() => stream?.getTracks().forEach((track) => track.stop()));
 </script>
 
-<div class="mx-auto mt-16 max-w-sm text-center">
-	{#if cameraError}
-		<p class="text-sm text-red-600">{cameraError}</p>
-	{:else}
-		<video bind:this={video} class="w-full rounded" playsinline muted></video>
-		<canvas bind:this={canvas} class="hidden"></canvas>
-		{#if result}
-			<p class="mt-3 text-sm font-medium {result === 'Checked in' ? 'text-green-600' : 'text-red-600'}">{result}</p>
+<div class="mx-auto mt-8 max-w-sm text-center">
+	<div class="glass overflow-hidden rounded-2xl p-4">
+		{#if cameraError}
+			<p class="flex items-center justify-center gap-2 py-8 text-sm text-red-600">
+				<WarningCircleIcon size={16} />
+				{cameraError}
+			</p>
 		{:else}
-			<p class="mt-3 text-sm text-gray-500">Point the camera at a ticket QR code</p>
+			<video bind:this={video} class="w-full rounded-xl" playsinline muted></video>
+			<canvas bind:this={canvas} class="hidden"></canvas>
+			{#if result}
+				<p
+					class="mt-3 flex items-center justify-center gap-2 text-sm font-medium {result === 'Checked in'
+						? 'text-green-600'
+						: 'text-red-600'}"
+				>
+					{#if result === 'Checked in'}
+						<CheckCircleIcon size={16} weight="fill" />
+					{:else}
+						<WarningCircleIcon size={16} />
+					{/if}
+					{result}
+				</p>
+			{:else}
+				<p class="mt-3 flex items-center justify-center gap-2 text-sm text-neutral-500">
+					<QrCodeIcon size={16} />
+					Point the camera at a ticket QR code
+				</p>
+			{/if}
 		{/if}
-	{/if}
+	</div>
 </div>
