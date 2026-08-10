@@ -1,8 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index';
-import { events, rsvps } from '$lib/server/db/schema';
+import { events, rsvps, users } from '$lib/server/db/schema';
 import { and, eq, count, asc } from 'drizzle-orm';
 import { getEventMembership } from '$lib/server/events/authz';
+import { sendTelegramMessage } from '$lib/server/telegram/bot';
 import { PartySocket } from 'partysocket';
 import { PARTYKIT_HOST } from '$env/static/private';
 import type { RequestHandler } from './$types';
@@ -17,16 +18,21 @@ async function countGoing(eventId: string): Promise<number> {
 	return row?.value ?? 0;
 }
 
-async function promoteFromWaitlist(eventId: string): Promise<void> {
+async function promoteFromWaitlist(eventId: string, origin: string): Promise<void> {
 	const [next] = await db
-		.select()
+		.select({ id: rsvps.id, userId: rsvps.userId })
 		.from(rsvps)
 		.where(and(eq(rsvps.eventId, eventId), eq(rsvps.status, 'waitlisted')))
 		.orderBy(asc(rsvps.createdAt))
 		.limit(1);
 
-	if (next) {
-		await db.update(rsvps).set({ status: 'going', updatedAt: new Date() }).where(eq(rsvps.id, next.id));
+	if (!next) return;
+
+	await db.update(rsvps).set({ status: 'going', updatedAt: new Date() }).where(eq(rsvps.id, next.id));
+
+	const [promoted] = await db.select({ telegramId: users.telegramId }).from(users).where(eq(users.id, next.userId)).limit(1);
+	if (promoted) {
+		await sendTelegramMessage(promoted.telegramId, `You're off the waitlist — you're going! ${origin}/events/${eventId}`);
 	}
 }
 
@@ -41,7 +47,7 @@ async function broadcastCount(eventId: string, goingCount: number): Promise<void
 	}
 }
 
-export const POST: RequestHandler = async ({ params, request, locals }) => {
+export const POST: RequestHandler = async ({ params, request, locals, url }) => {
 	if (!locals.user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
@@ -104,7 +110,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		});
 
 	if (existing?.status === 'going' && finalStatus !== 'going') {
-		await promoteFromWaitlist(eventId);
+		await promoteFromWaitlist(eventId, url.origin);
 	}
 
 	await broadcastCount(eventId, await countGoing(eventId));

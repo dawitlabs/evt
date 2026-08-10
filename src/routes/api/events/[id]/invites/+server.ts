@@ -4,6 +4,7 @@ import { users, eventsKeys, pendingInvites } from '$lib/server/db/schema';
 import { ilike } from 'drizzle-orm';
 import { getEventMembership, isManager } from '$lib/server/events/authz';
 import { normalizeTelegramUsername } from '$lib/server/events/username';
+import { sendTelegramMessage } from '$lib/server/telegram/bot';
 import type { RequestHandler } from './$types';
 
 function isUniqueViolation(error: unknown): boolean {
@@ -13,7 +14,7 @@ function isUniqueViolation(error: unknown): boolean {
 	return code === '23505';
 }
 
-export const POST: RequestHandler = async ({ params, request, locals }) => {
+export const POST: RequestHandler = async ({ params, request, locals, url }) => {
 	if (!locals.user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
@@ -34,7 +35,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const normalized = normalizeTelegramUsername(telegramUsername);
 
 	const [target] = await db
-		.select({ id: users.id, publicKey: users.publicKey })
+		.select({ id: users.id, publicKey: users.publicKey, telegramId: users.telegramId })
 		.from(users)
 		.where(ilike(users.username, normalized))
 		.limit(1);
@@ -52,6 +53,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 				role,
 				invitedBy: locals.user.id
 			});
+
+			await sendTelegramMessage(target.telegramId, `You've been added to an event: ${url.origin}/events/${eventId}`);
 
 			return json({ status: 'added' });
 		}

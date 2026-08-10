@@ -2,7 +2,8 @@ import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index';
 import { telegramLoginTokens } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET } from '$env/static/private';
+import { TELEGRAM_WEBHOOK_SECRET } from '$env/static/private';
+import { sendTelegramMessage } from '$lib/server/telegram/bot';
 import type { RequestHandler } from './$types';
 
 interface TelegramUpdate {
@@ -10,14 +11,6 @@ interface TelegramUpdate {
 		text?: string;
 		from?: { id: number; username?: string; first_name?: string };
 	};
-}
-
-async function replyToChat(chatId: number, text: string): Promise<void> {
-	await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ chat_id: chatId, text })
-	});
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -39,7 +32,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		.limit(1);
 
 	if (!token || token.status === 'verified' || token.expiresAt < new Date()) {
-		await replyToChat(from.id, 'This login link is invalid or expired.');
+		await sendTelegramMessage(String(from.id), 'This login link is invalid or expired.');
 		return json({ ok: true });
 	}
 
@@ -53,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		})
 		.where(eq(telegramLoginTokens.token, match[1]));
 
-	await replyToChat(from.id, 'Verified — you can return to the app.');
+	await sendTelegramMessage(String(from.id), 'Verified — you can return to the app.');
 
 	return json({ ok: true });
 };
